@@ -1,4 +1,5 @@
 import os
+import numpy.typing as npt
 import argparse
 from utils import read_image, parse_transcript
 import numpy as np
@@ -7,6 +8,7 @@ import torch
 from PIL import Image
 from inference.ocr import ocr_from_image
 from inference.tts import tts_from_text
+from typing import List,Tuple
 
 SECTIONING_MODEL = AutoModel.from_pretrained("ragavsachdeva/magiv2", trust_remote_code=True).cuda().eval()
 
@@ -40,7 +42,10 @@ def main():
     # Process the image
     process_image(manga_page)
 
-def process_image(image):
+def process_image(image) -> List[Tuple[Image.Image, npt.NDArray]]:
+
+    outputs = []
+
     with torch.no_grad():
         per_page_results = SECTIONING_MODEL.predict_detections_and_associations([image])
 
@@ -54,9 +59,12 @@ def process_image(image):
         # Crop the image using the bounding box
         cropped_image = image.crop((x_min, y_min, x_max, y_max)).convert('RGB')
         transcripted_lines = ocr_from_image(cropped_image)
-        for l in [transcripted_lines[1]]:
-            print(l)
-            tts_from_text(l)
+        for l in transcripted_lines[:5]:
+            tss_arr = tts_from_text(l)
+            outputs.append((cropped_image, tss_arr))
+            break
+        break
+    return outputs
 
 if __name__ == "__main__":
     main()
