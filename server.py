@@ -1,15 +1,15 @@
 import io
 import base64
 import secrets
-
+import threading
+from flask import Flask, request, redirect, url_for, jsonify
 import numpy as np
-from flask import Flask, request, redirect, url_for
 from flask import render_template_string
 from PIL import Image
 from scipy.io import wavfile
 
+from image_processor import process_image
 
-app = Flask(__name__)
 
 # A simple in-memory store for results. { key: [ (img_bytes, wav_bytes), ... ] }
 # In real apps, use a database or session, not a global dict!
@@ -17,24 +17,41 @@ stored_results = {}
 
 
 
-def process_image_bak(pil_img):
+def process_image_job(key, file_data):
     """
     Return a list of tuples: [(PIL.Image, np.array), ...].
     For demo, we create 3 dummy (image, audio) pairs.
     """
-    pil_img = pil_img.convert("RGB")
-    results = []
-    
-    # Example: Create 3 random-signal audios for the same image
-    for _ in range(3):
-        duration = 1.0  # seconds
-        sample_rate = 22050
-        t = np.linspace(0, duration, int(sample_rate*duration), endpoint=False)
-        freq = 440  # A4
-        audio = 0.5 * np.sin(2 * np.pi * freq * t) + 0.05*np.random.randn(len(t))
-        results.append((pil_img, audio))
-    
-    return results
+    pil_img = Image.open(io.BytesIO(file_data)).convert("L").convert("RGB")
+    pil_img_array = np.array(pil_img)
+    # Process the image
+    results = process_image(pil_img_array)
+    # Convert each (PIL.Image, np.array) to raw bytes
+    # so we can store them in memory without re-running the processing later.
+    results_bytes = []
+    for (img_obj, audio_array) in results:
+        # Convert image to PNG bytes
+        img_buffer = io.BytesIO()
+        img_obj.save(img_buffer, format="PNG")
+        img_bytes = img_buffer.getvalue()
+
+        # Convert audio array to WAV bytes
+        wav_buffer = io.BytesIO()
+        sample_rate = 44100
+        # Scale float array to int16
+        scaled = np.int16(audio_array / np.max(np.abs(audio_array)) * 32767)
+        wavfile.write(wav_buffer, sample_rate, scaled)
+        wav_bytes = wav_buffer.getvalue()
+
+        results_bytes.append((img_bytes, wav_bytes))
+
+    global stored_results
+    stored_results[key] = results_bytes
+
+
+
+
+app = Flask(__name__)
 
 @app.route("/", methods=["GET"])
 def index():
@@ -105,7 +122,6 @@ def index():
 
 @app.route("/upload", methods=["POST"])
 def handle_upload():
-    from image_processor import process_image
     """
     1) Read uploaded image
     2) Process the image
@@ -117,39 +133,32 @@ def handle_upload():
     file = request.files["image"]
     if not file.filename:
         return "Empty file!", 400
-    
-    pil_img = Image.open(file.stream).convert("L").convert("RGB")
-    pil_img_array = np.array(pil_img)
-    # Process the image
-    results = process_image(pil_img_array)
-    # Convert each (PIL.Image, np.array) to raw bytes
-    # so we can store them in memory without re-running the processing later.
-    results_bytes = []
-    for (img_obj, audio_array) in results:
-        # Convert image to PNG bytes
-        img_buffer = io.BytesIO()
-        img_obj.save(img_buffer, format="PNG")
-        img_bytes = img_buffer.getvalue()
-        
-        # Convert audio array to WAV bytes
-        wav_buffer = io.BytesIO()
-        sample_rate = 22050
-        # Scale float array to int16
-        scaled = np.int16(audio_array / np.max(np.abs(audio_array)) * 32767)
-        wavfile.write(wav_buffer, sample_rate, scaled)
-        wav_bytes = wav_buffer.getvalue()
-        
-        results_bytes.append((img_bytes, wav_bytes))
-    
-    # Store in global dictionary with a random key
+
     key = secrets.token_hex(16)
-    stored_results[key] = results_bytes
-    
-    # Redirect to results page
-    return redirect(url_for("show_results", result_key=key))
+
+    file_data = file.read()
+
+    thread = threading.Thread(target=process_image_job, args=(key, file_data))
+    thread.start()
+
+    # Return an HTML response with a clickable link
+    result_url = url_for("show_results", result_key=key, _external=True)
+    return f"""
+        <html>
+        <head>
+            <title>Processing Started</title>
+        </head>
+        <body>
+            <h1>Processing Started</h1>
+            <p>Your result will be available at the following link:</p>
+            <a href="{result_url}">{result_url}</a>
+        </body>
+        </html>
+    """, 202
 
 @app.route("/results/<result_key>")
 def show_results(result_key):
+    global stored_results
     """
     Retrieve the stored results from memory and render them.
     """
@@ -198,7 +207,4 @@ def show_results(result_key):
 """
     return html_content
 
-if __name__ == "__main__":
-    # Warning: "debug=True" is not for production
-    app.run(debug=True)
-
+app.run(debug=False)

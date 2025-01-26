@@ -59,11 +59,12 @@ def process_image(image) -> List[Tuple[Image.Image, npt.NDArray]]:
         # Crop the image using the bounding box
         cropped_image = image.crop((x_min, y_min, x_max, y_max)).convert('RGB')
         transcripted_lines = ocr_from_image(cropped_image)
+        print(f'ocr for image {i}')
         for l in transcripted_lines[:5]:
             tss_arr = tts_from_text(l)
             outputs.append((cropped_image, tss_arr))
-            break
-        break
+            print(f'tts for audio {l}')
+
     return outputs
 
 if __name__ == "__main__":
