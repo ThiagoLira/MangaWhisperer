@@ -16,7 +16,7 @@ def tts_from_text(text) -> npt.NDArray:
     description_tokenizer = AutoTokenizer.from_pretrained("2121-8/japanese-parler-tts-mini", subfolder="description_tokenizer")
 
     prompt = text
-    description = "A female speaker with a slightly high-pitched voice delivers her words at a moderate speed with a quite monotone tone in a confined environment, resulting in a quite clear audio recording."
+    description = "A male speaker with a high pitched voice, he speaks loudly and with energy."
 
 
     prompt = add_ruby(prompt)

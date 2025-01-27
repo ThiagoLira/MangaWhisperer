@@ -6,10 +6,9 @@ from flask import Flask, request, redirect, url_for, jsonify
 import numpy as np
 from flask import render_template_string
 from PIL import Image
-from scipy.io import wavfile
 
 from image_processor import process_image
-
+from utils import convert_np_array_to_wav
 
 # A simple in-memory store for results. { key: [ (img_bytes, wav_bytes), ... ] }
 # In real apps, use a database or session, not a global dict!
@@ -35,13 +34,7 @@ def process_image_job(key, file_data):
         img_obj.save(img_buffer, format="PNG")
         img_bytes = img_buffer.getvalue()
 
-        # Convert audio array to WAV bytes
-        wav_buffer = io.BytesIO()
-        sample_rate = 44100
-        # Scale float array to int16
-        scaled = np.int16(audio_array / np.max(np.abs(audio_array)) * 32767)
-        wavfile.write(wav_buffer, sample_rate, scaled)
-        wav_bytes = wav_buffer.getvalue()
+        wav_bytes = convert_np_array_to_wav(audio_array)
 
         results_bytes.append((img_bytes, wav_bytes))
 
@@ -164,9 +157,9 @@ def show_results(result_key):
     """
     if result_key not in stored_results:
         return "Invalid or expired results key.", 404
-    
+
     results_bytes = stored_results[result_key]
-    
+
     # Build the HTML
     html_content = """<!DOCTYPE html>
 <html>

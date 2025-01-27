@@ -8,6 +8,9 @@ import networkx as nx
 from copy import deepcopy
 from itertools import groupby
 from PIL import Image
+from scipy.io import wavfile
+import io
+
 
 def move_to_device(inputs, device):
     if hasattr(inputs, "keys"):
@@ -431,4 +434,18 @@ def parse_transcript(input_string):
         raise ValueError("Error: No valid lines found in the input string.")
 
     return parsed_list
+
+def convert_np_array_to_wav(audio_array, path_to_file=None):
+    # Convert audio array to WAV bytes
+    wav_buffer = io.BytesIO()
+    sample_rate = 44100
+    # Scale float array to int16
+    scaled = np.int16(audio_array / np.max(np.abs(audio_array)) * 32767)
+    wavfile.write(wav_buffer, sample_rate, scaled)
+    wav_bytes = wav_buffer.getvalue()
+    
+    if path_to_file:
+        wavfile.write(path_to_file, sample_rate, scaled)
+
+    return wav_bytes
 

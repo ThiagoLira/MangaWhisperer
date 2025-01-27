@@ -10,6 +10,8 @@ from inference.ocr import ocr_from_image
 from inference.tts import tts_from_text
 from typing import List,Tuple
 
+from utils import convert_np_array_to_wav
+
 SECTIONING_MODEL = AutoModel.from_pretrained("ragavsachdeva/magiv2", trust_remote_code=True).cuda().eval()
 
 
@@ -58,12 +60,26 @@ def process_image(image) -> List[Tuple[Image.Image, npt.NDArray]]:
     for i, (x_min, y_min, x_max, y_max) in enumerate(bounding_boxes):
         # Crop the image using the bounding box
         cropped_image = image.crop((x_min, y_min, x_max, y_max)).convert('RGB')
+        print(f'starting OCR... for image {i}')
         transcripted_lines = ocr_from_image(cropped_image)
-        print(f'ocr for image {i}')
-        for l in transcripted_lines[:5]:
+        print(f'finished OCR... for image {i}')
+        for j,l in enumerate(transcripted_lines[:5]):
             tss_arr = tts_from_text(l)
             outputs.append((cropped_image, tss_arr))
             print(f'tts for audio {l}')
+
+            # Save the cropped image
+            cropped_image_path = f'TEMP/cropped_image_{i}_{j}.png'
+            cropped_image.save(cropped_image_path)
+
+            # Save the audio file
+            audio_path = f'TEMP/audio_{i}_{j}.wav'
+            convert_np_array_to_wav(tss_arr, path_to_file=audio_path)
+
+            # Save the transcripted lines
+            text_path = f'TEMP/transcription_{i}_{j}.txt'
+            with open(text_path, 'w', encoding='utf-8') as text_file:
+                text_file.write(l)
 
     return outputs
 
