@@ -6,7 +6,7 @@ import numpy as np
 from transformers import AutoModel, AutoTokenizer
 import torch
 from PIL import Image
-from inference.ocr import ocr_from_image
+from inference.ocr import ocr_from_image_api
 from inference.tts import tts_from_text
 from typing import List,Tuple
 
@@ -61,9 +61,9 @@ def process_image(image) -> List[Tuple[Image.Image, npt.NDArray]]:
         # Crop the image using the bounding box
         cropped_image = image.crop((x_min, y_min, x_max, y_max)).convert('RGB')
         print(f'starting OCR... for image {i}')
-        transcripted_lines = ocr_from_image(cropped_image)
+        transcripted_lines = ocr_from_image_api(cropped_image)
         print(f'finished OCR... for image {i}')
-        for j,l in enumerate(transcripted_lines[:5]):
+        for j,l in enumerate(transcripted_lines):
             tss_arr = tts_from_text(l)
             outputs.append((cropped_image, tss_arr))
             print(f'tts for audio {l}')

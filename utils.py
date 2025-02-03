@@ -431,9 +431,9 @@ def parse_transcript(input_string):
     parsed_list = [line.split(": ")[1].strip() for line in lines if line.startswith("[") and "]: " in line]
 
     if not parsed_list:
-        raise ValueError("Error: No valid lines found in the input string.")
+        return []
 
-    return parsed_list
+    return [l for l in parsed_list if len(l)>1]
 
 def convert_np_array_to_wav(audio_array, path_to_file=None):
     # Convert audio array to WAV bytes
