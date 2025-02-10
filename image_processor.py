@@ -55,6 +55,11 @@ def process_image(image) -> List[Tuple[Image.Image, npt.NDArray]]:
 
     # Convert the NumPy array to a PIL Image
     image = Image.fromarray(image)
+    
+    # first fill the character bank 
+    print("Filling character bank...")
+    IMAGE_MODEL.update_character_bank(image)
+    print(f"Current character bank: {str(IMAGE_MODEL.character_bank)}")
 
     # Iterate through the bounding boxes and save each cropped region
     for i, (x_min, y_min, x_max, y_max) in enumerate(bounding_boxes):
@@ -64,7 +69,10 @@ def process_image(image) -> List[Tuple[Image.Image, npt.NDArray]]:
         transcripted_lines = IMAGE_MODEL.ocr_from_image(cropped_image)
         print(f'finished OCR... for image {i}')
         for j,l in enumerate(transcripted_lines):
-            tss_arr = tts_from_text(l)
+
+            character_description = IMAGE_MODEL.get_description_of_character_speaking(image, l)
+            print(f"Got description of character as: {character_description}")
+            tss_arr = tts_from_text(l, character_description)
             outputs.append((cropped_image, tss_arr))
             print(f'tts for audio {l}')
 

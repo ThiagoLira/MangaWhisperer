@@ -6,7 +6,7 @@ import numpy.typing as npt
 import torch
 from transformers import AutoTokenizer
 
-def tts_from_text(text) -> npt.NDArray:
+def tts_from_text(text, description_character) -> npt.NDArray:
     """
     Generate a wav transcription from an input text 
     """
@@ -16,11 +16,10 @@ def tts_from_text(text) -> npt.NDArray:
     description_tokenizer = AutoTokenizer.from_pretrained("2121-8/japanese-parler-tts-mini", subfolder="description_tokenizer")
 
     prompt = text
-    description = "A male speaker with a high pitched voice, he speaks loudly and with energy."
 
 
     prompt = add_ruby(prompt)
-    input_ids = description_tokenizer(description, return_tensors="pt").input_ids.to(device)
+    input_ids = description_tokenizer(description_character, return_tensors="pt").input_ids.to(device)
     prompt_input_ids = prompt_tokenizer(prompt, return_tensors="pt").input_ids.to(device)
 
     generation = model.generate(input_ids=input_ids, prompt_input_ids=prompt_input_ids)
