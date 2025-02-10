@@ -6,14 +6,14 @@ import numpy as np
 from transformers import AutoModel, AutoTokenizer
 import torch
 from PIL import Image
-from inference.ocr import ocr_from_image_api
+from inference.ocr import ImageModel 
 from inference.tts import tts_from_text
 from typing import List,Tuple
 
 from utils import convert_np_array_to_wav
 
 SECTIONING_MODEL = AutoModel.from_pretrained("ragavsachdeva/magiv2", trust_remote_code=True).cuda().eval()
-
+IMAGE_MODEL = ImageModel(is_local=False)
 
 
 def main():
@@ -61,7 +61,7 @@ def process_image(image) -> List[Tuple[Image.Image, npt.NDArray]]:
         # Crop the image using the bounding box
         cropped_image = image.crop((x_min, y_min, x_max, y_max)).convert('RGB')
         print(f'starting OCR... for image {i}')
-        transcripted_lines = ocr_from_image_api(cropped_image)
+        transcripted_lines = IMAGE_MODEL.ocr_from_image(cropped_image)
         print(f'finished OCR... for image {i}')
         for j,l in enumerate(transcripted_lines):
             tss_arr = tts_from_text(l)
