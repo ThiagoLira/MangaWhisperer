@@ -1,2 +1,10 @@
 Flask==2.2.5
-python-dotenv
+python-dotenv>=1.1.0
+Pillow>=9.0.0
+opencv-python>=4.7.0
+numpy>=1.23.0
+torch>=2.0.0
+torchaudio>=2.0.0
+torchvision>=0.15.0
+openai-whisper>=20230314
+easyocr>=1.6.2
