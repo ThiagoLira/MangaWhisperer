@@ -1,28 +1,93 @@
-from parler_tts import ParlerTTSForConditionalGeneration
-import soundfile as sf
-from rubyinserter import add_ruby
-from typing import List
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
+from typing import Optional
+
+import numpy as np
 import numpy.typing as npt
 import torch
+
+from rubyinserter import add_ruby
 from transformers import AutoTokenizer
 
-def tts_from_text(text, description_character) -> npt.NDArray:
-    """
-    Generate a wav transcription from an input text 
-    """
-    device = "cuda:0" if torch.cuda.is_available() else "cpu"
-    model = ParlerTTSForConditionalGeneration.from_pretrained("2121-8/japanese-parler-tts-mini").to(device)
-    prompt_tokenizer = AutoTokenizer.from_pretrained("2121-8/japanese-parler-tts-mini", subfolder="prompt_tokenizer")
-    description_tokenizer = AutoTokenizer.from_pretrained("2121-8/japanese-parler-tts-mini", subfolder="description_tokenizer")
+# Parler imports
+from parler_tts import ParlerTTSForConditionalGeneration
 
-    prompt = text
+# Kokoro imports will be optional
+try:
+    from kokoro import KPipeline  # type: ignore
+except Exception:  # pragma: no cover - kokoro may not be installed
+    KPipeline = None
 
 
-    prompt = add_ruby(prompt)
-    input_ids = description_tokenizer(description_character, return_tensors="pt").input_ids.to(device)
-    prompt_input_ids = prompt_tokenizer(prompt, return_tensors="pt").input_ids.to(device)
+class BaseTTS(ABC):
+    """Abstract base class for text-to-speech providers."""
 
-    generation = model.generate(input_ids=input_ids, prompt_input_ids=prompt_input_ids)
-    audio_arr = generation.cpu().numpy().squeeze()
-    #sf.write(f"parler_tts_japanese_out_{n}.wav", audio_arr, model.config.sampling_rate)
-    return audio_arr
+    @abstractmethod
+    def tts_from_text(self, text: str, description: Optional[str] = None) -> npt.NDArray:
+        """Generate audio from text."""
+        raise NotImplementedError
+
+
+class ParlerTTS(BaseTTS):
+    """Wrapper around the ParlerTTS model."""
+
+    def __init__(self, device: Optional[str] = None) -> None:
+        self.device = device or ("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.model = ParlerTTSForConditionalGeneration.from_pretrained(
+            "2121-8/japanese-parler-tts-mini"
+        ).to(self.device)
+        self.prompt_tokenizer = AutoTokenizer.from_pretrained(
+            "2121-8/japanese-parler-tts-mini", subfolder="prompt_tokenizer"
+        )
+        self.description_tokenizer = AutoTokenizer.from_pretrained(
+            "2121-8/japanese-parler-tts-mini", subfolder="description_tokenizer"
+        )
+
+    def tts_from_text(self, text: str, description: Optional[str] = None) -> npt.NDArray:
+        prompt = add_ruby(text)
+        description = description or ""
+        input_ids = self.description_tokenizer(description, return_tensors="pt").input_ids.to(
+            self.device
+        )
+        prompt_input_ids = self.prompt_tokenizer(prompt, return_tensors="pt").input_ids.to(
+            self.device
+        )
+        generation = self.model.generate(input_ids=input_ids, prompt_input_ids=prompt_input_ids)
+        return generation.cpu().numpy().squeeze()
+
+
+class KokoroTTS(BaseTTS):
+    """Wrapper around the Kokoro TTS pipeline."""
+
+    def __init__(self, voice: str = "j_kokoro", device: Optional[str] = None) -> None:
+        if KPipeline is None:
+            raise ImportError("kokoro library is required for KokoroTTS")
+        self.voice = voice
+        self.pipeline = KPipeline(lang_code="j", device=device)
+
+    def tts_from_text(self, text: str, description: Optional[str] = None) -> npt.NDArray:
+        voice = description or self.voice
+        audio_segments = []
+        for result in self.pipeline(text, voice=voice, split_pattern=r"\n+"):
+            if result.audio is not None:
+                audio_segments.append(result.audio.numpy())
+        return np.concatenate(audio_segments) if audio_segments else np.array([], dtype=np.float32)
+
+
+class TTS(BaseTTS):
+    """Main entry point for TTS with pluggable providers."""
+
+    providers = {
+        "parler": ParlerTTS,
+        "kokoro": KokoroTTS,
+    }
+
+    def __init__(self, provider: str = "parler", **kwargs) -> None:
+        provider = provider.lower()
+        if provider not in self.providers:
+            raise ValueError(f"Unsupported provider: {provider}")
+        self.backend = self.providers[provider](**kwargs)
+
+    def tts_from_text(self, text: str, description: Optional[str] = None) -> npt.NDArray:
+        return self.backend.tts_from_text(text, description)
