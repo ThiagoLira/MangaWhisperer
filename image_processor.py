@@ -7,13 +7,14 @@ from transformers import AutoModel, AutoTokenizer
 import torch
 from PIL import Image
 from inference.ocr import OCR
-from inference.tts import tts_from_text
+from inference.tts import TTS
 from typing import List,Tuple
 
 from utils import convert_np_array_to_wav
 
 SECTIONING_MODEL = AutoModel.from_pretrained("ragavsachdeva/magiv2", trust_remote_code=True).cuda().eval()
 IMAGE_MODEL = OCR(provider_name="openai")
+TTS_ENGINE = TTS(provider="parler")
 
 
 def main():
@@ -72,7 +73,7 @@ def process_image(image) -> List[Tuple[Image.Image, npt.NDArray]]:
 
             character_description = IMAGE_MODEL.get_description_of_character_speaking(image, l)
             print(f"Got description of character as: {character_description}")
-            tss_arr = tts_from_text(l, character_description)
+            tss_arr = TTS_ENGINE.tts_from_text(l, character_description)
             outputs.append((cropped_image, tss_arr))
             print(f'tts for audio {l}')
 
