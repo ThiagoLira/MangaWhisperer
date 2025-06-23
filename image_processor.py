@@ -6,14 +6,14 @@ import numpy as np
 from transformers import AutoModel, AutoTokenizer
 import torch
 from PIL import Image
-from inference.ocr import ImageModel 
+from inference.ocr import OCR
 from inference.tts import tts_from_text
 from typing import List,Tuple
 
 from utils import convert_np_array_to_wav
 
 SECTIONING_MODEL = AutoModel.from_pretrained("ragavsachdeva/magiv2", trust_remote_code=True).cuda().eval()
-IMAGE_MODEL = ImageModel(is_local=False)
+IMAGE_MODEL = OCR(provider_name="openai")
 
 
 def main():
