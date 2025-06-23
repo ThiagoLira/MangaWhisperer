@@ -10,6 +10,10 @@ from inference.ocr import OCR
 from inference.tts import TTS
 from typing import List,Tuple
 
+from dotenv import load_dotenv
+load_dotenv()
+
+
 from utils import convert_np_array_to_wav
 
 SECTIONING_MODEL = AutoModel.from_pretrained("ragavsachdeva/magiv2", trust_remote_code=True).cuda().eval()
@@ -71,9 +75,9 @@ def process_image(image) -> List[Tuple[Image.Image, npt.NDArray]]:
         print(f'finished OCR... for image {i}')
         for j,l in enumerate(transcripted_lines):
 
-            character_description = IMAGE_MODEL.get_description_of_character_speaking(image, l)
-            print(f"Got description of character as: {character_description}")
-            tss_arr = TTS_ENGINE.tts_from_text(l, character_description)
+            # character_description = IMAGE_MODEL.get_description_of_character_speaking(image, l)
+            # print(f"Got description of character as: {character_description}")
+            tss_arr = TTS_ENGINE.tts_from_text(l, "")
             outputs.append((cropped_image, tss_arr))
             print(f'tts for audio {l}')
 

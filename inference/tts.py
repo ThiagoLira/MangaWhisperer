@@ -7,7 +7,6 @@ import numpy as np
 import numpy.typing as npt
 import torch
 
-from rubyinserter import add_ruby
 from transformers import AutoTokenizer
 
 # Parler imports
@@ -45,7 +44,7 @@ class ParlerTTS(BaseTTS):
         )
 
     def tts_from_text(self, text: str, description: Optional[str] = None) -> npt.NDArray:
-        prompt = add_ruby(text)
+        prompt = text
         description = description or ""
         input_ids = self.description_tokenizer(description, return_tensors="pt").input_ids.to(
             self.device

@@ -121,7 +121,7 @@ class OpenAIProvider(BaseProvider):
         ]
 
         response = self.API_CLIENT.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4.1-mini-2025-04-14",
             messages=[{"role": "user", "content": messages_content}],
             max_tokens=100,
         )

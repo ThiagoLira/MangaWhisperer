@@ -449,3 +449,6 @@ def convert_np_array_to_wav(audio_array, path_to_file=None):
 
     return wav_bytes
 
+def parse_character_bank():
+    raise Exception("NOT IMPLEMENTED")
+
