@@ -62,9 +62,9 @@ def process_image(image) -> List[Tuple[Image.Image, npt.NDArray]]:
     image = Image.fromarray(image)
     
     # first fill the character bank 
-    print("Filling character bank...")
-    IMAGE_MODEL.update_character_bank(image)
-    print(f"Current character bank: {str(IMAGE_MODEL.character_bank)}")
+    # print("Filling character bank...")
+    # IMAGE_MODEL.update_character_bank(image)
+    # print(f"Current character bank: {str(IMAGE_MODEL.character_bank)}")
 
     # Iterate through the bounding boxes and save each cropped region
     for i, (x_min, y_min, x_max, y_max) in enumerate(bounding_boxes):
