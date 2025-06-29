@@ -36,7 +36,7 @@ def test_tts_providers(text: str) -> None:
             print(f"Testing TTS provider: {provider}")
             tts = TTS(provider=provider)
             audio = tts.tts_from_text(text)
-            wav_path = f"{provider}_sample.wav"
+            wav_path = f"sample_files/{provider}_sample.wav"
             convert_np_array_to_wav(audio, path_to_file=wav_path)
             print(f"Output ({provider}) saved to {wav_path}")
         except Exception as e:
@@ -45,7 +45,7 @@ def test_tts_providers(text: str) -> None:
 
 def main() -> None:
     img = create_sample_image()
-    img.save("sample_image.png")
+    img.save("sample_files/sample_image.png")
     test_ocr_providers(img)
     test_tts_providers("こんにちは、世界")
 
