@@ -23,8 +23,11 @@ class BaseTTS(ABC):
     """Abstract base class for text-to-speech providers."""
 
     @abstractmethod
-    def tts_from_text(self, text: str, description: Optional[str] = None) -> npt.NDArray:
-        """Generate audio from text."""
+    def tts_from_text(self, text: str, description: Optional[str] = None) -> tuple[npt.NDArray, int]:
+        """Generate audio from text.
+
+        Returns a tuple ``(audio, sample_rate)``.
+        """
         raise NotImplementedError
 
 
@@ -43,7 +46,7 @@ class ParlerTTS(BaseTTS):
             "2121-8/japanese-parler-tts-mini", subfolder="description_tokenizer"
         )
 
-    def tts_from_text(self, text: str, description: Optional[str] = None) -> npt.NDArray:
+    def tts_from_text(self, text: str, description: Optional[str] = None) -> tuple[npt.NDArray, int]:
         prompt = text
         description = description or ""
         input_ids = self.description_tokenizer(description, return_tensors="pt").input_ids.to(
@@ -53,7 +56,7 @@ class ParlerTTS(BaseTTS):
             self.device
         )
         generation = self.model.generate(input_ids=input_ids, prompt_input_ids=prompt_input_ids)
-        return generation.cpu().numpy().squeeze()
+        return generation.cpu().numpy().squeeze(), 44100
 
 
 class KokoroTTS(BaseTTS):
@@ -65,13 +68,14 @@ class KokoroTTS(BaseTTS):
         self.voice = voice
         self.pipeline = KPipeline(lang_code="j", device=device)
 
-    def tts_from_text(self, text: str, description: Optional[str] = None) -> npt.NDArray:
+    def tts_from_text(self, text: str, description: Optional[str] = None) -> tuple[npt.NDArray, int]:
         voice = description or self.voice
         audio_segments = []
         for result in self.pipeline(text, voice=voice, split_pattern=r"\n+"):
             if result.audio is not None:
                 audio_segments.append(result.audio.numpy())
-        return np.concatenate(audio_segments) if audio_segments else np.array([], dtype=np.float32)
+        audio = np.concatenate(audio_segments) if audio_segments else np.array([], dtype=np.float32)
+        return audio, 24000
 
 
 class TTS(BaseTTS):
@@ -88,5 +92,5 @@ class TTS(BaseTTS):
             raise ValueError(f"Unsupported provider: {provider}")
         self.backend = self.providers[provider](**kwargs)
 
-    def tts_from_text(self, text: str, description: Optional[str] = None) -> npt.NDArray:
+    def tts_from_text(self, text: str, description: Optional[str] = None) -> tuple[npt.NDArray, int]:
         return self.backend.tts_from_text(text, description)

@@ -39,9 +39,9 @@ def test_tts_providers(text: str, providers=None) -> None:
         try:
             print(f"Testing TTS provider: {provider}")
             tts = TTS(provider=provider)
-            audio = tts.tts_from_text(text)
+            audio, sample_rate = tts.tts_from_text(text)
             wav_path = f"sample_files/{provider}_sample.wav"
-            convert_np_array_to_wav(audio, path_to_file=wav_path)
+            convert_np_array_to_wav(audio, sample_rate, path_to_file=wav_path)
             print(f"Output ({provider}) saved to {wav_path}")
         except Exception as e:
             print(f"Failed to use TTS provider '{provider}': {e}")

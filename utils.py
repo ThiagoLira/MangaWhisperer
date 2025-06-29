@@ -435,15 +435,16 @@ def parse_transcript(input_string):
 
     return [l for l in parsed_list if len(l)>1]
 
-def convert_np_array_to_wav(audio_array, path_to_file=None):
-    # Convert audio array to WAV bytes
+def convert_np_array_to_wav(audio_array, sample_rate, path_to_file=None):
+    """Convert a numpy array to WAV bytes using the provided sample rate."""
     wav_buffer = io.BytesIO()
-    sample_rate = 44100
-    # Scale float array to int16
-    scaled = np.int16(audio_array / np.max(np.abs(audio_array)) * 32767)
+    if audio_array.size == 0:
+        scaled = np.array([], dtype=np.int16)
+    else:
+        scaled = np.int16(audio_array / np.max(np.abs(audio_array)) * 32767)
     wavfile.write(wav_buffer, sample_rate, scaled)
     wav_bytes = wav_buffer.getvalue()
-    
+
     if path_to_file:
         wavfile.write(path_to_file, sample_rate, scaled)
 
