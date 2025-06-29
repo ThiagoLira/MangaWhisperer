@@ -62,14 +62,14 @@ class ParlerTTS(BaseTTS):
 class KokoroTTS(BaseTTS):
     """Wrapper around the Kokoro TTS pipeline."""
 
-    def __init__(self, voice: str = "j_kokoro", device: Optional[str] = None) -> None:
+    def __init__(self, voice: str = "jf_tebukuro", device: Optional[str] = None) -> None:
         if KPipeline is None:
             raise ImportError("kokoro library is required for KokoroTTS")
         self.voice = voice
         self.pipeline = KPipeline(lang_code="j", device=device)
 
     def tts_from_text(self, text: str, description: Optional[str] = None) -> tuple[npt.NDArray, int]:
-        voice = description or self.voice
+        voice = self.voice
         audio_segments = []
         for result in self.pipeline(text, voice=voice, split_pattern=r"\n+"):
             if result.audio is not None:
