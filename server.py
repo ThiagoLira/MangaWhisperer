@@ -18,7 +18,8 @@ stored_results = {}
 
 def process_image_job(key, file_data):
     """
-    Return a list of tuples: [(PIL.Image, np.array), ...].
+    Return a list of tuples: ``[(PIL.Image, np.ndarray, int), ...]`` where the
+    integer is the sample rate of the audio.
     For demo, we create 3 dummy (image, audio) pairs.
     """
     pil_img = Image.open(io.BytesIO(file_data)).convert("L").convert("RGB")
@@ -28,13 +29,13 @@ def process_image_job(key, file_data):
     # Convert each (PIL.Image, np.array) to raw bytes
     # so we can store them in memory without re-running the processing later.
     results_bytes = []
-    for (img_obj, audio_array) in results:
+    for (img_obj, audio_array, sample_rate) in results:
         # Convert image to PNG bytes
         img_buffer = io.BytesIO()
         img_obj.save(img_buffer, format="PNG")
         img_bytes = img_buffer.getvalue()
 
-        wav_bytes = convert_np_array_to_wav(audio_array)
+        wav_bytes = convert_np_array_to_wav(audio_array, sample_rate)
 
         results_bytes.append((img_bytes, wav_bytes))
 

@@ -49,7 +49,7 @@ def main():
     # Process the image
     process_image(manga_page)
 
-def process_image(image) -> List[Tuple[Image.Image, npt.NDArray]]:
+def process_image(image) -> List[Tuple[Image.Image, npt.NDArray, int]]:
 
     outputs = []
 
@@ -77,8 +77,8 @@ def process_image(image) -> List[Tuple[Image.Image, npt.NDArray]]:
 
             # character_description = IMAGE_MODEL.get_description_of_character_speaking(image, l)
             # print(f"Got description of character as: {character_description}")
-            tss_arr = TTS_ENGINE.tts_from_text(l, "")
-            outputs.append((cropped_image, tss_arr))
+            tss_arr, sample_rate = TTS_ENGINE.tts_from_text(l, "")
+            outputs.append((cropped_image, tss_arr, sample_rate))
             print(f'tts for audio {l}')
 
             # Save the cropped image
@@ -87,7 +87,7 @@ def process_image(image) -> List[Tuple[Image.Image, npt.NDArray]]:
 
             # Save the audio file
             audio_path = f'TEMP/audio_{i}_{j}.wav'
-            convert_np_array_to_wav(tss_arr, path_to_file=audio_path)
+            convert_np_array_to_wav(tss_arr, sample_rate, path_to_file=audio_path)
 
             # Save the transcripted lines
             text_path = f'TEMP/transcription_{i}_{j}.txt'
