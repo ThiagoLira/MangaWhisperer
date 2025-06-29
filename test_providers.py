@@ -1,8 +1,7 @@
 from PIL import Image, ImageDraw, ImageFont
+import argparse
+import os
 
-from inference.ocr import OCR
-from inference.tts import TTS
-from utils import convert_np_array_to_wav
 
 
 def create_sample_image() -> Image.Image:
@@ -19,8 +18,10 @@ def create_sample_image() -> Image.Image:
     return img
 
 
-def test_ocr_providers(img: Image.Image) -> None:
-    for provider in ["openai", "llamacpp"]:
+def test_ocr_providers(img: Image.Image, providers=None) -> None:
+    from inference.ocr import OCR
+    providers = providers or ["openai", "llamacpp"]
+    for provider in providers:
         try:
             print(f"Testing OCR provider: {provider}")
             ocr = OCR(provider_name=provider)
@@ -30,8 +31,11 @@ def test_ocr_providers(img: Image.Image) -> None:
             print(f"Failed to use OCR provider '{provider}': {e}")
 
 
-def test_tts_providers(text: str) -> None:
-    for provider in ["parler", "kokoro"]:
+def test_tts_providers(text: str, providers=None) -> None:
+    from inference.tts import TTS
+    from utils import convert_np_array_to_wav
+    providers = providers or ["parler", "kokoro"]
+    for provider in providers:
         try:
             print(f"Testing TTS provider: {provider}")
             tts = TTS(provider=provider)
@@ -44,10 +48,22 @@ def test_tts_providers(text: str) -> None:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Test OCR and TTS providers")
+    parser.add_argument(
+        "provider",
+        choices=["openai", "llamacpp", "parler", "kokoro"],
+        help="Name of the provider to test",
+    )
+    args = parser.parse_args()
+
+    os.makedirs("sample_files", exist_ok=True)
     img = create_sample_image()
     img.save("sample_files/sample_image.png")
-    test_ocr_providers(img)
-    test_tts_providers("こんにちは、世界")
+
+    if args.provider in ["openai", "llamacpp"]:
+        test_ocr_providers(img, providers=[args.provider])
+    else:
+        test_tts_providers("こんにちは、世界", providers=[args.provider])
 
 
 if __name__ == "__main__":
