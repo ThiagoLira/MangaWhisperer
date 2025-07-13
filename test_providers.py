@@ -20,7 +20,7 @@ def create_sample_image() -> Image.Image:
 
 def test_ocr_providers(img: Image.Image, providers=None) -> None:
     from inference.ocr import OCR
-    providers = providers or ["openai", "llamacpp"]
+    providers = providers or ["openai", "llamacpp", "manga_ocr"]
     for provider in providers:
         try:
             print(f"Testing OCR provider: {provider}")
@@ -51,7 +51,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Test OCR and TTS providers")
     parser.add_argument(
         "provider",
-        choices=["openai", "llamacpp", "parler", "kokoro"],
+        choices=["openai", "llamacpp", "manga_ocr", "parler", "kokoro"],
         help="Name of the provider to test",
     )
     args = parser.parse_args()
@@ -60,7 +60,7 @@ def main() -> None:
     img = create_sample_image()
     img.save("sample_files/sample_image.png")
 
-    if args.provider in ["openai", "llamacpp"]:
+    if args.provider in ["openai", "llamacpp", "manga_ocr"]:
         test_ocr_providers(img, providers=[args.provider])
     else:
         test_tts_providers("こんにちは、世界", providers=[args.provider])

@@ -1,7 +1,7 @@
-from utils import read_image, parse_transcript, parse_character_bank
+from utils import parse_transcript, parse_character_bank
 import torch
 from PIL import Image
-from typing import List
+from typing import List, Optional
 import base64
 import io
 
@@ -62,7 +62,7 @@ IF YOU ARE UNSURE JUST RETURN 0
 class BaseProvider:
     """Base class for OCR providers."""
 
-    def call_image_model(self, image, prompt: str):
+    def call_image_model(self, image, prompt: Optional[str] = None):
         raise NotImplementedError
 
 
@@ -84,8 +84,11 @@ class LlamacppProvider(BaseProvider):
             'openbmb/MiniCPM-o-2_6', trust_remote_code=True
         )
 
-    def call_image_model(self, image, prompt: str):
-        msgs = [{'role': 'user', 'content': [image, prompt]}]
+    def call_image_model(self, image, prompt: Optional[str] = None):
+        content = [image]
+        if prompt:
+            content.append(prompt)
+        msgs = [{'role': 'user', 'content': content}]
         res = self.OCR_MODEL.chat(
             max_new_tokens=100,
             image=None,
@@ -108,17 +111,17 @@ class OpenAIProvider(BaseProvider):
             )
         self.API_CLIENT = OpenAI()
 
-    def call_image_model(self, image, prompt: str):
+    def call_image_model(self, image, prompt: Optional[str] = None):
         buffered = io.BytesIO()
         image.save(buffered, format="JPEG")
         img_bytes = buffered.getvalue()
         base64_image = base64.b64encode(img_bytes).decode("utf-8")
         data_uri = f"data:image/jpeg;base64,{base64_image}"
 
-        messages_content = [
-            {"type": "text", "text": prompt},
-            {"type": "image_url", "image_url": {"url": data_uri}},
-        ]
+        messages_content = []
+        if prompt:
+            messages_content.append({"type": "text", "text": prompt})
+        messages_content.append({"type": "image_url", "image_url": {"url": data_uri}})
 
         response = self.API_CLIENT.chat.completions.create(
             model="gpt-4.1-mini-2025-04-14",
@@ -128,6 +131,22 @@ class OpenAIProvider(BaseProvider):
         return response.choices[0].message.content
 
 
+class MangaOCRProvider(BaseProvider):
+    """Provider using the manga-ocr library."""
+
+    def __init__(self):
+        from manga_ocr import MangaOCR  # type: ignore
+
+        self.model = MangaOCR()
+
+    def call_image_model(self, image, prompt: Optional[str] = None):
+        if not isinstance(image, Image.Image):
+            image = Image.fromarray(image)
+        text = self.model(image)
+        lines = [line.strip() for line in text.split("\n") if line.strip()]
+        return "\n".join(f"[{i+1}]: {line}" for i, line in enumerate(lines))
+
+
 class OCR:
     def __init__(self, provider_name: str = "openai"):
         provider_name = provider_name.lower()
@@ -135,6 +154,8 @@ class OCR:
             self.provider = LlamacppProvider()
         elif provider_name == "openai":
             self.provider = OpenAIProvider()
+        elif provider_name in {"manga_ocr", "manga-ocr", "mangaocr"}:
+            self.provider = MangaOCRProvider()
         else:
             raise ValueError(f"Unknown provider: {provider_name}")
 
